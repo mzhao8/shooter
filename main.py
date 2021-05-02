@@ -1,4 +1,5 @@
 import pygame
+import os
 
 pygame.init()
 
@@ -22,9 +23,11 @@ moving_right = False
 
 #define colors
 BG = (144, 201, 120)
+RED = (255, 0, 0)
 
 def draw_bg():
   screen.fill(BG)
+  pygame.draw.line(screen, RED, (0, 300), (SCREEN_WIDTH, 300))
 
 
 
@@ -37,25 +40,25 @@ class Soldier(pygame.sprite.Sprite):
     self.direction = 1 #1 is looking to right, -1 looking to left
     self.vel_y = 0
     self.jump = False
+    self.in_air = True
     self.flip = False
     self.animation_list = []
     self.frame_index = 0
     self.action = 0 #0 means idle
     self.update_time = pygame.time.get_ticks()
 
-    temp_list = []
-    for i in range(5):
-      img = pygame.image.load(f'img/{self.char_type}/Idle/{i}.png')
-      img = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
-      temp_list.append(img)
-    self.animation_list.append(temp_list)
-
-    temp_list = []
-    for i in range(6):
-      img = pygame.image.load(f'img/{self.char_type}/Run/{i}.png')
-      img = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
-      temp_list.append(img)
-    self.animation_list.append(temp_list)
+    #load all images for the players
+    animation_types = ['Idle', 'Run', 'Jump']
+    for animation in animation_types:
+      #reset temporary list of images 
+      temp_list = []
+      #count number of files in the folder
+      num_of_frames = len(os.listdir(f'img/{self.char_type}/{animation}'))
+      for i in range(num_of_frames):
+        img = pygame.image.load(f'img/{self.char_type}/{animation}/{i}.png')
+        img = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
+        temp_list.append(img)
+      self.animation_list.append(temp_list)
 
     self.image = self.animation_list[self.action][self.frame_index]
     self.rect = self.image.get_rect()
@@ -77,9 +80,10 @@ class Soldier(pygame.sprite.Sprite):
       self.direction = 1
     
     #jump
-    if self.jump == True:
-      dy = self.vel_y = -11
+    if self.jump == True and self.in_air == False:
+      self.vel_y = -11
       self.jump = False
+      self.in_air = True
     
     #apply gravity
     self.vel_y += GRAVITY
@@ -87,13 +91,18 @@ class Soldier(pygame.sprite.Sprite):
       self.vel_y
     dy += self.vel_y
 
+    #check collision with floor
+    if self.rect.bottom + dy > 300:
+      dy = 300 - self.rect.bottom
+      self.in_air = False
+
     #update rectangle position
     self.rect.x += dx
     self.rect.y += dy    
 
   def update_animation(self): #updates the frame index number
     #update animation
-    ANIMATION_COOLDOWN = 80
+    ANIMATION_COOLDOWN = 100
     #update image depending on current frame
     self.image = self.animation_list[self.action][self.frame_index]
     #check if enough time has passed since last update
@@ -136,7 +145,9 @@ while run:
 
   #update player actions
   if player.alive:
-    if moving_left or moving_right:
+    if player.in_air:
+      player.update_action(2) #2: jump
+    elif moving_left or moving_right:
       player.update_action(1) #changes action state to run (#1) in the self.img call
     else:
       player.update_action(0) #changes action state to idle (#0) in the self.img call
