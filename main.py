@@ -766,7 +766,6 @@ while run:
       else:
         player.update_action(0) #changes action state to idle (#0) in the self.img call
       screen_scroll, level_complete = player.move(moving_left, moving_right)
-      print(level_complete)
       bg_scroll -= screen_scroll
       #check if player has completed the level
       if level_complete:
